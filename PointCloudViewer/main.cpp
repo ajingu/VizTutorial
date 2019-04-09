@@ -10,30 +10,57 @@ static void help()
 {
 	cout
 		<< "--------------------------------------------------------------------------" << endl
-		<< "This program shows how to launch a 3D visualization window. You can stop event loop to continue executing. "
-		<< "You can access the same window via its name. You can run event loop for a given period of time. " << endl
+		<< "This program shows how to use makeTransformToGlobal() to compute required pose,"
+		<< "how to use makeCameraPose and Viz3d::setViewerPose. You can observe the scene "
+		<< "from camera point of view (C) or global point of view (G)" << endl
 		<< "Usage:" << endl
-		<< "./launching_viz" << endl
+		<< "./main [ G | C ]" << endl
 		<< endl;
 }
+
+
+static Mat cvcloud_load()
+{
+	Mat cloud(1, 1889, CV_32FC3);
+
+	Point3f* data = cloud.ptr<cv::Point3f>();
+	
+	for (size_t i = 0; i < 1889; ++i)
+	{
+		data[i].x = 0;
+		data[i].y = i * 0.01;
+		data[i].z = 0;
+	}
+	
+	return cloud;
+}
+
 
 int main()
 {
 	help();
-	viz::Viz3d myWindow("Viz Demo");
-
-	myWindow.spin();
-
-	cout << "First event loop is over" << endl;
-	viz::Viz3d sameWindow = viz::getWindowByName("Viz Demo");
-	sameWindow.spin();
-	cout << "Second event loop is over" << endl;
-	sameWindow.spinOnce(1, true);
-	while (!sameWindow.wasStopped())
+	
+	bool camera_pov = false;
+	viz::Viz3d myWindow("Coordinate Frame");
+	myWindow.showWidget("Coordinate Widget", viz::WCoordinateSystem());
+	Vec3f cam_pos(3.0f, 3.0f, 3.0f), cam_focal_point(3.0f, 3.0f, 2.0f), cam_y_dir(-1.0f, 0.0f, 0.0f);
+	Affine3f cam_pose = viz::makeCameraPose(cam_pos, cam_focal_point, cam_y_dir);
+	Affine3f transform = viz::makeTransformToGlobal(Vec3f(0.0f, -1.0f, 0.0f), Vec3f(-1.0f, 0.0f, 0.0f), Vec3f(0.0f, 0.0f, -1.0f), cam_pos);//Œ´“_‚ðŠî€‚É‚µ‚½ƒJƒƒ‰‚ÌAffine•ÏŠ·
+	Mat bunny_cloud = cvcloud_load();
+	viz::WCloud cloud_widget(bunny_cloud, viz::Color::green());
+	Affine3f cloud_pose = Affine3f().translate(Vec3f(0.0f, 0.0f, 3.0f));
+	Affine3f cloud_pose_global = transform * cloud_pose;
+	if (!camera_pov)
 	{
-		sameWindow.spinOnce(1, true);
+		viz::WCameraPosition cpw(0.5); // Coordinate axes
+		viz::WCameraPosition cpw_frustum(Vec2f(0.889484, 0.523599)); // Camera frustum
+		myWindow.showWidget("CPW", cpw, cam_pose);
+		myWindow.showWidget("CPW_FRUSTUM", cpw_frustum, cam_pose);
 	}
-	cout << "Last event loop is over" << endl;
+	myWindow.showWidget("bunny", cloud_widget, cloud_pose_global);
+	if (camera_pov)
+		myWindow.setViewerPose(cam_pose);
+	myWindow.spin();
 
 	return 0;
 }
