@@ -1,2 +1,3 @@
-# PointCloudViewer
-Point Cloud Viewer (OpenCV viz etc.)
+# VizTutorial
+Point Cloud Viewer using OpenCV viz.  
+
